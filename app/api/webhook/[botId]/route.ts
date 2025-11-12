@@ -21,42 +21,65 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ botId: string }> | { botId: string } }
 ) {
+  const resolvedParams = await Promise.resolve(params);
+  const botId = resolvedParams.botId;
+  
+  // 요청 정보 로깅 (프로덕션 디버깅용)
+  const requestUrl = request.url;
+  const requestHeaders = {
+    host: request.headers.get('host'),
+    'x-forwarded-proto': request.headers.get('x-forwarded-proto'),
+    'x-forwarded-host': request.headers.get('x-forwarded-host'),
+    'user-agent': request.headers.get('user-agent'),
+  };
+  
+  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('🔔 TradingView 웹훅 요청 수신!');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`🌐 Request URL: ${requestUrl}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+  console.log(`📡 Headers:`, JSON.stringify(requestHeaders, null, 2));
+  console.log(`🤖 Bot ID: ${botId}`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  
   try {
     const body = await request.json();
     const { action, ticker, price } = body;
     
-    // 요청 로깅 (디버깅용)
-    const resolvedParams = await Promise.resolve(params);
-    const botId = resolvedParams.botId;
-    
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔔 TradingView 웹훅 요청 수신!');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`📋 Action: ${action}`);
-    console.log(`🤖 Bot ID: ${botId}`);
     console.log(`📈 Ticker: ${ticker || 'N/A'}`);
     console.log(`💰 Price: ${price || 'N/A'}`);
     console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    console.log(`📦 Full Body:`, JSON.stringify(body, null, 2));
     
     if (!botId) {
+      console.error('❌ Bot ID가 없습니다');
       return NextResponse.json(
         { error: 'botId가 필요합니다' },
-        { status: 400 }
+        { status: 400, headers: getCorsHeaders() }
       );
     }
     
     // 봇 조회
+    console.log(`🔍 봇 조회 시도: ${botId}`);
     const bot = await db.bot.findUnique({
       where: { id: botId },
     });
     
     if (!bot) {
+      console.error(`❌ 봇을 찾을 수 없습니다: ${botId}`);
+      console.log(`💡 데이터베이스에 존재하는 봇 ID 확인 필요`);
       return NextResponse.json(
-        { error: '봇을 찾을 수 없습니다' },
-        { status: 404 }
+        { 
+          error: '봇을 찾을 수 없습니다',
+          botId: botId,
+          hint: '프로덕션 데이터베이스에 봇이 생성되어 있는지 확인하세요'
+        },
+        { status: 404, headers: getCorsHeaders() }
       );
     }
+    
+    console.log(`✅ 봇 찾음: ${bot.ticker} (${bot.id})`);
     
     const symbol = (ticker || bot.ticker).toUpperCase();
     
