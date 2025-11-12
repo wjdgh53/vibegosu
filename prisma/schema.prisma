@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Bot {
+  id                  String    @id @default(cuid())
+  ticker              String
+  amount              Float     // 투자금 (USD)
+  stopLoss            Float     // 손절 비율 (예: 0.03 = 3%)
+  takeProfit          Float     // 익절 비율 (예: 0.07 = 7%)
+  sentimentThreshold  Float     @default(0.7) // 뉴스 센티먼트 최소값
+  webhookUrl          String    @unique
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  positions           Position[]
+  trades              Trade[]
+  
+  @@index([ticker])
+}
+
+model Position {
+  id          String   @id @default(cuid())
+  botId       String
+  ticker      String
+  entryPrice  Float
+  quantity    Float
+  entryTime   DateTime @default(now())
+  status      String   @default("open") // open, closed
+  exitPrice   Float?
+  exitTime    DateTime?
+  
+  bot         Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+  
+  @@index([botId])
+  @@index([ticker])
+  @@index([status])
+}
+
+model Trade {
+  id              String   @id @default(cuid())
+  botId           String
+  ticker           String
+  entryPrice       Float
+  exitPrice        Float?
+  profit           Float?  // 수익률 (예: 0.048 = 4.8%)
+  sentimentScore   Float?  // 진입 당시 뉴스 센티먼트 점수
+  newsTitles       String   @default("[]") // 진입 당시 뉴스 제목 5개 (JSON 배열)
+  status           String   @default("completed") // completed, rejected
+  rejectionReason  String?  // 거부 사유
+  timestamp        DateTime @default(now())
+  
+  bot              Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+  
+  @@index([botId])
+  @@index([ticker])
+  @@index([timestamp])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // buy, sell, reject, error
+  ticker    String
+  message   String
+  timestamp DateTime @default(now())
+  
+  @@index([timestamp])
+}
