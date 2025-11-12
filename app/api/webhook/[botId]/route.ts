@@ -303,6 +303,17 @@ export async function POST(
   } catch (error: any) {
     console.error('Webhook 처리 오류:', error);
     
+    // 401 에러인 경우 (Alpaca API 인증 실패)
+    const isAuthError = error.message?.includes('401') || 
+                       error.message?.includes('인증') ||
+                       error.statusCode === 401 ||
+                       error.status === 401;
+    
+    if (isAuthError) {
+      console.error('❌ Alpaca API 인증 실패 (401)');
+      console.error('   Vercel 환경 변수에서 ALPACA_API_KEY와 ALPACA_SECRET_KEY를 확인하세요');
+    }
+    
     // 알림 저장
     try {
       await db.notification.create({
@@ -317,8 +328,11 @@ export async function POST(
     }
     
     return NextResponse.json(
-      { error: error.message || '서버 오류가 발생했습니다' },
-      { status: 500, headers: getCorsHeaders() }
+      { 
+        error: error.message || '서버 오류가 발생했습니다',
+        hint: isAuthError ? 'Alpaca API 키를 확인하세요. Vercel 환경 변수에서 ALPACA_API_KEY와 ALPACA_SECRET_KEY를 확인하세요.' : undefined
+      },
+      { status: isAuthError ? 401 : 500, headers: getCorsHeaders() }
     );
   }
 }

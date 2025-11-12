@@ -1,10 +1,41 @@
 import Alpaca from '@alpacahq/alpaca-trade-api';
 import { Position } from '@/types';
 
+// 환경 변수 검증
+function validateAlpacaConfig() {
+  const apiKey = process.env.ALPACA_API_KEY;
+  const secretKey = process.env.ALPACA_SECRET_KEY;
+  const baseUrl = process.env.ALPACA_BASE_URL || 'https://paper-api.alpaca.markets';
+
+  if (!apiKey || !secretKey) {
+    const missing = [];
+    if (!apiKey) missing.push('ALPACA_API_KEY');
+    if (!secretKey) missing.push('ALPACA_SECRET_KEY');
+    
+    const errorMsg = `Alpaca API 환경 변수가 설정되지 않았습니다: ${missing.join(', ')}`;
+    console.error('❌', errorMsg);
+    console.error('💡 Vercel Dashboard → Settings → Environment Variables에서 확인하세요');
+    throw new Error(errorMsg);
+  }
+
+  // API 키 형식 검증 (기본적인 형식 체크)
+  if (apiKey.length < 10 || secretKey.length < 10) {
+    console.warn('⚠️ Alpaca API 키 형식이 올바르지 않을 수 있습니다');
+  }
+
+  console.log('✅ Alpaca API 설정 확인 완료');
+  console.log(`   Base URL: ${baseUrl}`);
+  console.log(`   API Key: ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}`);
+  
+  return { apiKey, secretKey, baseUrl };
+}
+
+const config = validateAlpacaConfig();
+
 const alpaca = new Alpaca({
-  keyId: process.env.ALPACA_API_KEY!,
-  secretKey: process.env.ALPACA_SECRET_KEY!,
-  baseUrl: process.env.ALPACA_BASE_URL || 'https://paper-api.alpaca.markets',
+  keyId: config.apiKey,
+  secretKey: config.secretKey,
+  baseUrl: config.baseUrl,
   paper: true,
 });
 
@@ -99,6 +130,17 @@ export class AlpacaClient {
     try {
       return await alpaca.getAccount();
     } catch (error: any) {
+      // 401 에러인 경우 더 자세한 정보 제공
+      if (error.statusCode === 401 || error.status === 401 || error.message?.includes('401')) {
+        console.error('❌ Alpaca API 인증 실패 (401)');
+        console.error('   가능한 원인:');
+        console.error('   1. ALPACA_API_KEY가 잘못되었거나 만료됨');
+        console.error('   2. ALPACA_SECRET_KEY가 잘못되었거나 만료됨');
+        console.error('   3. ALPACA_BASE_URL이 잘못 설정됨');
+        console.error('   4. Paper Trading 계정이 아닌 실전 계정 키를 사용 중');
+        console.error('   💡 Vercel Dashboard → Settings → Environment Variables 확인 필요');
+        throw new Error(`계정 정보 조회 실패: 인증 오류 (401) - API 키를 확인하세요. ${error.message || ''}`);
+      }
       throw new Error(`계정 정보 조회 실패: ${error.message}`);
     }
   }
@@ -268,7 +310,13 @@ export class AlpacaClient {
           }
         }
       } catch (barsError: any) {
-        console.warn(`Bars 조회 실패 (${symbol}):`, barsError?.message || barsError);
+        // 401 에러인 경우 더 자세한 로깅
+        if (barsError?.statusCode === 401 || barsError?.status === 401 || barsError?.code === 401) {
+          console.error(`❌ Bars 조회 실패 (${symbol}): 인증 오류 (401)`);
+          console.error('   Alpaca API 키를 확인하세요');
+        } else {
+          console.warn(`Bars 조회 실패 (${symbol}):`, barsError?.message || barsError);
+        }
       }
       
       // 5순위: Alpha Vantage API를 대체 방법으로 사용
