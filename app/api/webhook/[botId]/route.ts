@@ -14,6 +14,7 @@ function getCorsHeaders() {
 }
 
 export async function OPTIONS() {
+  console.log('🔵 OPTIONS 요청 수신 (CORS preflight)');
   return NextResponse.json({}, { headers: getCorsHeaders() });
 }
 
