@@ -26,6 +26,7 @@ function validateAlpacaConfig() {
   console.log('✅ Alpaca API 설정 확인 완료');
   console.log(`   Base URL: ${baseUrl}`);
   console.log(`   API Key: ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}`);
+  console.log(`   Secret Key: ${secretKey.substring(0, 4)}...${secretKey.substring(secretKey.length - 4)}`);
   
   return { apiKey, secretKey, baseUrl };
 }
