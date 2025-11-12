@@ -24,17 +24,54 @@ async function getBaseUrl(request?: NextRequest): Promise<string> {
     return cachedBaseUrl;
   }
   
-  // 2. 서버 사이드에서 요청이 있으면 Host 헤더 사용
+  // 2. 프로덕션 환경에서 프로덕션 도메인 우선 사용
+  if (process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production') {
+    // Vercel 프로덕션 도메인 추출 (프로젝트 이름 기반)
+    const vercelUrl = process.env.VERCEL_URL;
+    if (vercelUrl && !vercelUrl.includes('-') && !vercelUrl.includes('--')) {
+      // 프로덕션 도메인 형식: vibegosu.vercel.app
+      cachedBaseUrl = `https://${vercelUrl}`;
+      cacheTimestamp = now;
+      return cachedBaseUrl;
+    }
+    
+    // VERCEL_URL이 없으면 프로젝트 이름 기반으로 추정
+    // Vercel은 보통 프로젝트 이름을 도메인으로 사용
+    const projectName = process.env.VERCEL_PROJECT_NAME || 'vibegosu';
+    cachedBaseUrl = `https://${projectName}.vercel.app`;
+    cacheTimestamp = now;
+    console.log(`✅ 프로덕션 도메인 사용: ${cachedBaseUrl}`);
+    return cachedBaseUrl;
+  }
+  
+  // 3. 서버 사이드에서 요청이 있으면 Host 헤더 사용
   if (request) {
     const host = request.headers.get('host');
     const forwardedProto = request.headers.get('x-forwarded-proto');
     const forwardedHost = request.headers.get('x-forwarded-host');
+    
+    // 프로덕션 도메인 감지 (해시 없는 깔끔한 도메인)
+    if (host && !host.includes('-') && !host.includes('--') && host.includes('vercel.app')) {
+      const protocol = forwardedProto || 'https';
+      cachedBaseUrl = `${protocol}://${host}`;
+      cacheTimestamp = now;
+      console.log(`✅ 프로덕션 도메인 감지: ${cachedBaseUrl}`);
+      return cachedBaseUrl;
+    }
     
     // Vercel/프로덕션 환경 감지
     if (forwardedHost || forwardedProto) {
       const finalHost = forwardedHost || host;
       const protocol = forwardedProto || 'https';
       if (finalHost) {
+        // 프리뷰 URL이면 프로덕션 도메인으로 변환 시도
+        if (finalHost.includes('projects.vercel.app')) {
+          const projectName = process.env.VERCEL_PROJECT_NAME || 'vibegosu';
+          cachedBaseUrl = `https://${projectName}.vercel.app`;
+          cacheTimestamp = now;
+          console.log(`✅ 프리뷰 URL 감지, 프로덕션 도메인으로 변환: ${cachedBaseUrl}`);
+          return cachedBaseUrl;
+        }
         cachedBaseUrl = `${protocol}://${finalHost}`;
         cacheTimestamp = now;
         return cachedBaseUrl;
@@ -101,15 +138,34 @@ export function generateWebhookUrlSync(botId: string, request?: NextRequest): st
     return `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhook/${botId}`;
   }
   
+  // 프로덕션 환경에서 프로덕션 도메인 우선 사용
+  if (process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production') {
+    const projectName = process.env.VERCEL_PROJECT_NAME || 'vibegosu';
+    const baseUrl = `https://${projectName}.vercel.app`;
+    console.log(`✅ 프로덕션 도메인 사용 (동기): ${baseUrl}`);
+    return `${baseUrl}/api/webhook/${botId}`;
+  }
+  
   if (request) {
     const host = request.headers.get('host');
     const forwardedProto = request.headers.get('x-forwarded-proto');
     const forwardedHost = request.headers.get('x-forwarded-host');
     
+    // 프로덕션 도메인 감지 (해시 없는 깔끔한 도메인)
+    if (host && !host.includes('-') && !host.includes('--') && host.includes('vercel.app')) {
+      const protocol = forwardedProto || 'https';
+      return `${protocol}://${host}/api/webhook/${botId}`;
+    }
+    
     if (forwardedHost || forwardedProto) {
       const finalHost = forwardedHost || host;
       const protocol = forwardedProto || 'https';
       if (finalHost) {
+        // 프리뷰 URL이면 프로덕션 도메인으로 변환
+        if (finalHost.includes('projects.vercel.app')) {
+          const projectName = process.env.VERCEL_PROJECT_NAME || 'vibegosu';
+          return `https://${projectName}.vercel.app/api/webhook/${botId}`;
+        }
         return `${protocol}://${finalHost}/api/webhook/${botId}`;
       }
     } else if (host) {
