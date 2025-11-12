@@ -5,7 +5,12 @@ import { Position } from '@/types';
 function validateAlpacaConfig() {
   const apiKey = process.env.ALPACA_API_KEY;
   const secretKey = process.env.ALPACA_SECRET_KEY;
-  const baseUrl = process.env.ALPACA_BASE_URL || 'https://paper-api.alpaca.markets';
+  // baseUrl에 /v2 경로 포함 (Alpaca API v2 사용)
+  let baseUrl = process.env.ALPACA_BASE_URL || 'https://paper-api.alpaca.markets';
+  // /v2가 없으면 추가
+  if (!baseUrl.endsWith('/v2') && !baseUrl.endsWith('/v2/')) {
+    baseUrl = baseUrl.endsWith('/') ? `${baseUrl}v2` : `${baseUrl}/v2`;
+  }
 
   if (!apiKey || !secretKey) {
     const missing = [];
