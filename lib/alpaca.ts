@@ -121,10 +121,10 @@ export class AlpacaClient {
       
       // 1순위: getLatestBar를 사용한 최신 바 조회 (가장 안정적)
       try {
-        const latestBar = await alpaca.getLatestBar(symbol);
+        const latestBar: any = await alpaca.getLatestBar(symbol);
         if (latestBar) {
           const closePrice = latestBar.ClosePrice || latestBar.close || latestBar.c || 
-                           latestBar.Close || (latestBar as any).ClosePrice || (latestBar as any).close;
+                           latestBar.Close;
           if (closePrice !== undefined && closePrice !== null) {
             const numPrice = typeof closePrice === 'string' ? parseFloat(closePrice) : closePrice;
             if (!isNaN(numPrice) && numPrice > 0) {
@@ -235,9 +235,9 @@ export class AlpacaClient {
           }
           
           if (bars.length > 0) {
-            const bar = bars[bars.length - 1]; // 가장 최근 바
+            const bar: any = bars[bars.length - 1]; // 가장 최근 바
             const closePrice = bar.ClosePrice || bar.close || bar.c || 
-                             bar.Close || (bar as any).ClosePrice || (bar as any).close;
+                             bar.Close;
             
             if (closePrice !== undefined && closePrice !== null) {
               const numPrice = typeof closePrice === 'string' 
