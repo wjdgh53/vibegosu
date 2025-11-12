@@ -146,9 +146,14 @@ export class AlpacaClient {
         } catch (e1: any) {
           // 객체 형식으로 시도
           try {
-            const trades = await alpaca.getLatestTrades({ symbols: [symbol] });
-            if (trades && trades[symbol]) {
-              lastTrade = trades[symbol];
+            const trades: any = await alpaca.getLatestTrades({ symbols: [symbol] });
+            if (trades) {
+              // Map 타입일 수도 있고 객체일 수도 있음
+              if (trades instanceof Map) {
+                lastTrade = trades.get(symbol);
+              } else if (trades[symbol]) {
+                lastTrade = trades[symbol];
+              }
             }
           } catch (e2: any) {
             throw e1; // 원래 에러 사용
@@ -179,9 +184,14 @@ export class AlpacaClient {
         } catch (e1: any) {
           // 객체 형식으로 시도
           try {
-            const quotes = await alpaca.getLatestQuotes({ symbols: [symbol] });
-            if (quotes && quotes[symbol]) {
-              lastQuote = quotes[symbol];
+            const quotes: any = await alpaca.getLatestQuotes({ symbols: [symbol] });
+            if (quotes) {
+              // Map 타입일 수도 있고 객체일 수도 있음
+              if (quotes instanceof Map) {
+                lastQuote = quotes.get(symbol);
+              } else if (quotes[symbol]) {
+                lastQuote = quotes[symbol];
+              }
             }
           } catch (e2: any) {
             throw e1; // 원래 에러 사용
