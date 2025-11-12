@@ -8,12 +8,12 @@ export async function GET() {
   try {
     const apiKey = process.env.ALPACA_API_KEY;
     const secretKey = process.env.ALPACA_SECRET_KEY;
-    // baseUrl에 /v2 경로 포함 (Alpaca API v2 사용)
+    // baseUrl은 /v2 없이 설정 (SDK가 자동으로 추가함)
     let baseUrl = process.env.ALPACA_BASE_URL || 'https://paper-api.alpaca.markets';
-    // /v2가 없으면 추가
-    if (!baseUrl.endsWith('/v2') && !baseUrl.endsWith('/v2/')) {
-      baseUrl = baseUrl.endsWith('/') ? `${baseUrl}v2` : `${baseUrl}/v2`;
-    }
+    // /v2 제거 (SDK가 자동으로 추가)
+    baseUrl = baseUrl.replace(/\/v2\/?$/, '');
+    // 끝에 슬래시 제거
+    baseUrl = baseUrl.replace(/\/$/, '');
 
     if (!apiKey || !secretKey) {
       return NextResponse.json({
