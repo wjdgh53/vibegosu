@@ -231,17 +231,24 @@ export class AlpacaClient {
         // async generator에서 첫 번째 값 가져오기
         const barsResult = await barsIterator.next();
         if (!barsResult.done && barsResult.value) {
-          // 응답 형식: { [symbol]: Bar[] } 또는 Bar[]
+          // 응답 형식: { [symbol]: Bar[] } 또는 Bar[] 또는 Map
           let bars: any[] = [];
+          const value: any = barsResult.value;
           
-          if (barsResult.value[symbol]) {
-            bars = Array.isArray(barsResult.value[symbol]) 
-              ? barsResult.value[symbol] 
-              : [barsResult.value[symbol]];
-          } else if (Array.isArray(barsResult.value)) {
-            bars = barsResult.value;
+          // Map 타입인지 확인
+          if (value instanceof Map) {
+            const mapValue = value.get(symbol);
+            if (mapValue) {
+              bars = Array.isArray(mapValue) ? mapValue : [mapValue];
+            }
+          } else if (value[symbol]) {
+            bars = Array.isArray(value[symbol]) 
+              ? value[symbol] 
+              : [value[symbol]];
+          } else if (Array.isArray(value)) {
+            bars = value;
           } else {
-            bars = [barsResult.value];
+            bars = [value];
           }
           
           if (bars.length > 0) {
