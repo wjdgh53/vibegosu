@@ -51,8 +51,16 @@ export default function DashboardPage() {
       
       // 봇 목록 조회
       const botsRes = await fetch('/api/bots');
+      if (!botsRes.ok) {
+        const errorData = await botsRes.json();
+        console.error('봇 조회 실패:', errorData.error);
+        // 에러가 있어도 빈 배열로 설정하여 앱이 크래시되지 않도록
+        setBots(errorData.bots || []);
+        return;
+      }
       const botsData = await botsRes.json();
-      setBots(botsData);
+      // 에러 메시지가 포함되어 있어도 bots 배열이 있으면 사용
+      setBots(Array.isArray(botsData) ? botsData : botsData.bots || []);
       
       // 계정 정보 조회
       try {

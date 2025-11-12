@@ -125,14 +125,35 @@ https://your-project.vercel.app/api/webhook/[botId]
 **옵션 1: Vercel Postgres (권장)**
 - Vercel Dashboard에서 직접 연결
 - 무료 티어 제공
+- 자동으로 `DATABASE_URL` 환경 변수 설정됨
 
 **옵션 2: Supabase**
 - 무료 PostgreSQL 제공
-- `DATABASE_URL` 환경 변수에 연결
+- `DATABASE_URL` 환경 변수에 연결 문자열 입력
 
 **옵션 3: PlanetScale**
 - 무료 MySQL 제공
-- Prisma 스키마 수정 필요
+- Prisma 스키마 수정 필요 (`provider = "mysql"`)
+
+**자세한 설정 방법**: [DATABASE_SETUP.md](./DATABASE_SETUP.md) 참고
+
+#### 웹훅 시크릿 (선택사항)
+
+보안을 강화하려면 `WEBHOOK_SECRET` 환경 변수를 설정하세요:
+
+1. **시크릿 생성**
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+
+2. **Vercel 환경 변수에 추가**
+   ```
+   WEBHOOK_SECRET=생성된_시크릿_값
+   ```
+
+3. **코드에 검증 로직 추가 필요**
+   - 현재는 환경 변수만 정의되어 있고 검증 로직은 구현되지 않음
+   - 보안 강화가 필요하면 [WEBHOOK_SECRET_SETUP.md](./WEBHOOK_SECRET_SETUP.md) 참고
 
 ## 📁 핵심 파일 구조
 
